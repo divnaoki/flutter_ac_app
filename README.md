@@ -109,6 +109,46 @@ flutter pub get
 flutter run
 ```
 
+## Windowsでのビルド・実行手順
+
+1. **Gitのインストール**
+   - [Git公式サイト](https://git-scm.com/)からインストールしてください。
+
+2. **Flutterのインストール**
+   - [Flutter公式サイト](https://docs.flutter.dev/get-started/install/windows)の手順に従ってインストールしてください。
+
+3. **Visual Studioのインストール**
+   - WindowsデスクトップアプリのビルドにはVisual Studio（Community版でOK）が必要です。
+   - インストール時に「C++によるデスクトップ開発」ワークロードを追加してください。
+
+4. **リポジトリのクローン**
+   ```sh
+   git clone <リポジトリのURL>
+   cd accesible_media_app
+   ```
+
+5. **依存パッケージの取得**
+   ```sh
+   flutter pub get
+   ```
+
+6. **Windows用のビルド準備**
+   - 通常は`windows/`ディレクトリが含まれているため追加作業は不要です。
+   - もし`windows/`ディレクトリが無い場合は、
+     ```sh
+     flutter create .
+     ```
+     を実行してください。
+
+7. **アプリの実行**
+   ```sh
+   flutter run -d windows
+   ```
+   または、Visual Studio CodeやAndroid Studioの「Run」ボタンからも実行できます。
+
+8. **トラブルシューティング**
+   - エラーが出た場合は、エラーメッセージを確認し、必要に応じてFlutter公式ドキュメントや本READMEの内容を参照してください。
+
 ## テスト
 
 ```bash
