@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'video_add_screen.dart';
 import 'package:video_player/video_player.dart';
 import '../providers/video_providers.dart';
+import '../widgets/main_layout.dart';
 import 'dart:io';
 import 'video_detail_screen.dart';
 
@@ -14,54 +16,109 @@ class VideoListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final videosAsync = ref.watch(watchVideosByCategoryProvider(categoryId));
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('動画一覧 - カテゴリID: $categoryId'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+    
+    return MainLayout(
+      title: '動画一覧',
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          context.push('/category/$categoryId/add-video');
+        },
+        tooltip: '動画追加',
+        child: const Icon(Icons.video_library),
       ),
-      body: videosAsync.when(
+      child: videosAsync.when(
         data: (videos) => videos.isEmpty
-            ? const Center(child: Text('動画がありません\n動画を追加してください'))
+            ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.video_library_outlined,
+                      size: 64,
+                      color: Colors.grey,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      '動画がありません',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      '右下のボタンから動画を追加してください',
+                      style: TextStyle(
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              )
             : ListView.builder(
+                padding: const EdgeInsets.all(16),
                 itemCount: videos.length,
                 itemBuilder: (context, index) {
                   final video = videos[index];
                   return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: ListTile(
-                      leading: SizedBox(
-                        width: 80,
-                        height: 56,
-                        child: _VideoThumbnail(videoPath: video.videoPath),
-                      ),
-                      title: Text(video.name),
-                      subtitle: Text('追加日: ${video.createdAt.toString().split(' ')[0]}'),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: InkWell(
                       onTap: () {
                         // 動画再生画面に遷移
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => VideoDetailScreen(videoId: video.id),
-                          ),
-                        );
+                        context.push('/video/${video.id}');
                       },
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: SizedBox(
+                                width: 120,
+                                height: 68,
+                                child: _VideoThumbnail(videoPath: video.videoPath),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    video.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '追加日: ${video.createdAt.toString().split(' ')[0]}',
+                                    style: const TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.play_circle_outline,
+                              color: Colors.red,
+                              size: 24,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   );
                 },
               ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('エラー: $error')),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // 動画追加画面にカテゴリIDを渡して遷移
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => VideoAddScreen(categoryId: categoryId),
-            ),
-          );
-        },
-        tooltip: '動画追加',
-        child: const Icon(Icons.video_library),
       ),
     );
   }
@@ -99,7 +156,12 @@ class _VideoThumbnailState extends State<_VideoThumbnail> {
   @override
   Widget build(BuildContext context) {
     if (!_initialized) {
-      return const Center(child: CircularProgressIndicator());
+      return Container(
+        color: Colors.grey[300],
+        child: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
     }
     return AspectRatio(
       aspectRatio: _controller!.value.aspectRatio,

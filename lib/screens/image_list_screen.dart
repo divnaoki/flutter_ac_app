@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'dart:io';
 import '../providers/image_providers.dart';
 import '../data/database.dart' as db;
+import '../widgets/main_layout.dart';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 
 class ImageListScreen extends ConsumerWidget {
   final int categoryId;
@@ -14,15 +17,44 @@ class ImageListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final imagesAsync = ref.watch(watchImagesByCategoryProvider(categoryId));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('画像一覧'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+    return MainLayout(
+      title: '画像一覧',
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          context.push('/category/$categoryId/add-image');
+        },
+        tooltip: '画像追加',
+        child: const Icon(Icons.add_a_photo),
       ),
-      body: imagesAsync.when(
+      child: imagesAsync.when(
         data: (images) => images.isEmpty
             ? const Center(
-                child: Text('画像がありません\n画像を追加してください'),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.image_outlined,
+                      size: 64,
+                      color: Colors.grey,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      '画像がありません',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      '右下のボタンから画像を追加してください',
+                      style: TextStyle(
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
               )
             : GridView.builder(
                 padding: const EdgeInsets.all(16),
@@ -86,75 +118,84 @@ class ImageListScreen extends ConsumerWidget {
           child: Text('エラー: $error'),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // 画像追加画面にカテゴリIDを渡して遷移
-          context.push('/category/$categoryId/add-image');
-        },
-        tooltip: '画像追加',
-        child: const Icon(Icons.add_a_photo),
-      ),
     );
   }
 
-  Widget _buildImageWidget(String imagePath) {
-    final file = File(imagePath);
-    
-    if (!file.existsSync()) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.broken_image,
-              size: 48,
-              color: Colors.grey,
-            ),
-            SizedBox(height: 8),
-            Text(
-              '画像が見つかりません',
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      );
+  Future<File> _resolveImageFile(String imagePath) async {
+    // もし絶対パスならそのまま返す
+    if (path.isAbsolute(imagePath)) {
+      return File(imagePath);
     }
+    // ファイル名だけならアプリのドキュメントディレクトリ+media/ファイル名
+    final appDir = await getApplicationDocumentsDirectory();
+    final filePath = path.join(appDir.path, 'media', imagePath);
+    return File(filePath);
+  }
 
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(12),
-      ),
-      child: Image.file(
-        file,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        errorBuilder: (context, error, stackTrace) {
+  Widget _buildImageWidget(String imagePath) {
+    return FutureBuilder<File>(
+      future: _resolveImageFile(imagePath),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final file = snapshot.data!;
+        if (!file.existsSync()) {
           return const Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.error_outline,
+                  Icons.broken_image,
                   size: 48,
-                  color: Colors.red,
+                  color: Colors.grey,
                 ),
                 SizedBox(height: 8),
                 Text(
-                  '画像の読み込みに失敗',
+                  '画像が見つかりません',
                   style: TextStyle(
-                    color: Colors.red,
+                    color: Colors.grey,
                     fontSize: 12,
                   ),
                 ),
               ],
             ),
           );
-        },
-      ),
+        }
+        return ClipRRect(
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(12),
+          ),
+          child: Image.file(
+            file,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+            errorBuilder: (context, error, stackTrace) {
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      '画像の読み込みに失敗',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 } 
